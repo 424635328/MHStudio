@@ -5,7 +5,7 @@ import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useUiStore } from '@/stores/ui';
-import { useRedirect } from '@/composables/useRedirect'; // [NEW] 1. 导入 useRedirect
+import { useRedirect } from '@/composables/useRedirect';
 import AuthModal from '@/components/auth/AuthModal.vue';
 import NavIcon from './common/NavIcon.vue';
 
@@ -13,7 +13,7 @@ import NavIcon from './common/NavIcon.vue';
 const authStore = useAuthStore();
 const uiStore = useUiStore();
 const route = useRoute();
-const { redirectWithTip } = useRedirect(); // [NEW] 2. 实例化 redirect composable
+const { redirectWithTip } = useRedirect();
 
 // --- 响应式状态定义 ---
 const isMobileMenuOpen = ref(false);
@@ -72,14 +72,10 @@ const activeDropdown = computed(() => {
 });
 
 // --- 方法 (Methods) ---
-
-// [NEW] 3. 创建统一的导航处理函数
 const handleNavClick = (to) => {
-  // 如果移动端菜单是打开的，先关闭它
   if (isMobileMenuOpen.value) {
     closeMobileMenu();
   }
-  // 使用我们的 redirect composable 来处理跳转
   redirectWithTip(to);
 };
 
@@ -90,15 +86,12 @@ const openAuthModal = () => {
   isAuthModalActive.value = true;
 };
 
-// [MODIFIED] 4. 更新注销方法以使用跳转提示
 const handleLogout = async () => {
   closeMobileMenu();
-  // 先显示提示并开始导航到首页
   redirectWithTip('/', {
     loadingMessage: '正在为您安全注销...',
     successMessage: '您已成功注销！'
   });
-  // 然后在后台执行实际的注销操作
   await authStore.signOut();
 };
 
@@ -133,7 +126,6 @@ watch([isMobileMenuOpen, isAuthModalActive], ([isMenuOpen, isModalOpen]) => {
 <template>
   <header class="app-header" :class="{ scrolled: isScrolled, 'menu-open': isMobileMenuOpen }">
     <div class="container header-content">
-      <!-- [MODIFIED] 使用 custom v-slot 拦截点击事件 -->
       <RouterLink to="/" custom v-slot="{ href }">
         <a :href="href" @click.prevent="handleNavClick('/')" class="logo">
           <img src="/LOGO.jpeg" alt="MHStudio Logo" />
@@ -145,7 +137,6 @@ watch([isMobileMenuOpen, isAuthModalActive], ([isMenuOpen, isModalOpen]) => {
       <nav class="desktop-nav" aria-label="主导航">
         <ul>
           <li v-for="link in filteredNavLinks" :key="link.text">
-            <!-- [MODIFIED] 使用 custom v-slot 拦截点击事件 -->
             <RouterLink v-if="!link.children" :to="link.to" custom v-slot="{ href, isExactActive }">
               <a :href="href" @click.prevent="handleNavClick(link.to)" :class="{ 'router-link-exact-active': isExactActive }">
                 {{ link.text }}
@@ -165,7 +156,6 @@ watch([isMobileMenuOpen, isAuthModalActive], ([isMenuOpen, isModalOpen]) => {
                 <div v-if="openDropdownMenu === link.text" class="dropdown-menu">
                   <transition-group tag="ul" name="staggered-item-fade" appear>
                     <li v-for="(child, index) in link.children" :key="child.to" :data-index="index">
-                      <!-- [MODIFIED] 使用 custom v-slot 拦截点击事件 -->
                       <RouterLink :to="child.to" custom v-slot="{ href, isExactActive }">
                         <a :href="href" @click.prevent="handleNavClick(child.to)" :class="{ 'router-link-exact-active': isExactActive }">
                           <NavIcon :name="child.icon" />
@@ -181,7 +171,7 @@ watch([isMobileMenuOpen, isAuthModalActive], ([isMenuOpen, isModalOpen]) => {
         </ul>
       </nav>
 
-      <!-- 右侧操作按钮 (注销按钮已通过修改 handleLogout 方法来支持) -->
+      <!-- 右侧操作按钮 -->
       <div class="header-actions">
         <template v-if="isAuthenticated">
           <button @click="handleLogout" class="cta-button auth-button">注销</button>
@@ -212,7 +202,6 @@ watch([isMobileMenuOpen, isAuthModalActive], ([isMenuOpen, isModalOpen]) => {
       <nav v-if="isMobileMenuOpen" class="mobile-nav" aria-label="移动端导航">
         <ul id="mobile-nav-list">
           <li v-for="(item, index) in flatNavLinksForMobile" :key="item.to" :style="{ '--delay': index * 0.05 + 's' }">
-            <!-- [MODIFIED] 使用 custom v-slot 拦截点击事件 -->
             <RouterLink :to="item.to" custom v-slot="{ href, isExactActive }">
               <a :href="href" @click.prevent="handleNavClick(item.to)" :class="{ 'router-link-exact-active': isExactActive }">
                 <NavIcon :name="item.icon" />
@@ -270,18 +259,61 @@ watch([isMobileMenuOpen, isAuthModalActive], ([isMenuOpen, isModalOpen]) => {
   img { width: 40px; height: 40px; border-radius: 50%; }
 }
 
-// --- 桌面导航 ---
+// --- 桌面导航 (✨视觉效果改进) ---
 .desktop-nav {
   @media (min-width: $breakpoint-md) { display: flex; justify-content: center; flex-grow: 1; }
   ul { display: flex; align-items: center; list-style: none; margin: 0; padding: 0; gap: 0.5rem; }
+
   a, .dropdown-button {
-    color: var(--color-text); font-size: 1rem; font-weight: 500;
-    padding: 0.5rem 1rem; position: relative; text-decoration: none; border-radius: 8px;
-    transition: color 0.3s ease, background-color 0.3s ease;
-    cursor: pointer; /* [MODIFIED] 确保 a 标签有指针手势 */
-    &:hover { color: var(--color-heading); background-color: var(--color-background-mute); }
-    &.router-link-exact-active {
-      color: var(--color-primary); font-weight: 600; background-color: var(--color-primary-translucent);
+    color: var(--color-text);
+    font-size: 1rem;
+    font-weight: 500;
+    padding: 0.75rem 1rem; /* 增加垂直 padding 给下滑线留出空间 */
+    position: relative; /* [新增] 为 ::after 伪元素定位 */
+    text-decoration: none;
+    border-radius: 8px;
+    background-color: transparent; /* [修改] 默认无背景色 */
+    transition: color 0.3s ease;
+    cursor: pointer;
+
+    /* [新增] 下滑线伪元素 */
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 6px; /* 控制下滑线与文字的距离 */
+      left: 0;
+      right: 0;
+      margin: 0 auto;
+      width: 90%; /* 下滑线宽度，比按钮稍窄更美观 */
+      height: 2px;
+      background-color: var(--color-primary);
+      border-radius: 1px;
+      transform: scaleX(0); /* 初始状态，隐藏 */
+      transform-origin: center;
+      transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1); /* 平滑的动画曲线 */
+    }
+
+    /* [修改] 悬停效果 */
+    &:hover {
+      color: var(--color-heading);
+      background-color: var(--color-background-mute); /* 保留背景色反馈 */
+    }
+
+    /* [新增] 悬停时显示下滑线 */
+    &:hover::after {
+      transform: scaleX(1);
+    }
+
+    /* [修改] 当前激活路由的样式 */
+    &.router-link-exact-active, &.active {
+      color: var(--color-primary);
+      font-weight: 600;
+      background-color: transparent; /* 移除背景色，让下滑线成为主要指示器 */
+    }
+
+    /* [新增] 激活时，始终显示下滑线 */
+    &.router-link-exact-active::after, &.active::after {
+      transform: scaleX(1);
     }
   }
 }
@@ -290,15 +322,15 @@ watch([isMobileMenuOpen, isAuthModalActive], ([isMenuOpen, isModalOpen]) => {
 .dropdown-container { position: relative; }
 .dropdown-button {
   display: flex; align-items: center; gap: 0.25rem;
-  background: none; border: none; font-family: inherit; cursor: pointer;
+  border: none; font-family: inherit;
   .dropdown-arrow { width: 1em; height: 1em; fill: currentColor; transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
-  &.active { color: var(--color-primary); font-weight: 600; background-color: var(--color-primary-translucent); }
+  // &.active 样式已合并到上面的 a, .dropdown-button 规则中
 }
 .dropdown-container:hover .dropdown-button .dropdown-arrow { transform: rotate(180deg); }
 .dropdown-menu {
   position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
-  margin-top: 1rem; /* 增加与按钮的距离 */
-  background-color: rgba(var(--color-background-soft-rgb), 0.7); /* 半透明背景 */
+  margin-top: 1rem;
+  background-color: rgba(var(--color-background-soft-rgb), 0.7);
   backdrop-filter: blur(12px) saturate(1.2);
   -webkit-backdrop-filter: blur(12px) saturate(1.2);
   border: 1px solid var(--color-border);
@@ -306,34 +338,20 @@ watch([isMobileMenuOpen, isAuthModalActive], ([isMenuOpen, isModalOpen]) => {
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
   padding: 0.5rem; z-index: 10; width: max-content; min-width: 220px;
 
-  /* 小箭头 */
   &::before {
-    content: '';
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0;
-    height: 0;
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
+    content: ''; position: absolute; bottom: 100%; left: 50%;
+    transform: translateX(-50%); width: 0; height: 0;
+    border-left: 8px solid transparent; border-right: 8px solid transparent;
     border-bottom: 8px solid var(--color-border);
   }
 
-  ul {
-    display: flex;
-    flex-direction: column;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    gap: 0.25rem;
-    align-items: flex-start;
-  }
+  ul { display: flex; flex-direction: column; list-style: none; margin: 0; padding: 0; gap: 0.25rem; align-items: flex-start; }
   li { width: 100%; }
   a {
     display: flex; align-items: center; gap: 0.75rem; width: 100%;
     padding: 0.75rem 1rem; text-align: left; white-space: nowrap;
-    background-color: transparent !important;
+    // 重置桌面导航的下滑线效果
+    &::after { display: none; }
     &:hover { background-color: var(--color-background-mute) !important; }
     &.router-link-exact-active { background-color: var(--color-primary-translucent) !important; color: var(--color-primary); }
   }
@@ -411,7 +429,6 @@ watch([isMobileMenuOpen, isAuthModalActive], ([isMenuOpen, isModalOpen]) => {
 .slide-fade-leave-active { transition: all 0.3s cubic-bezier(0.755, 0.05, 0.855, 0.06); }
 .slide-fade-enter-from, .slide-fade-leave-to { transform: translateY(-30px); opacity: 0; }
 
-/* 下拉菜单容器动画 */
 .dropdown-fade-enter-active,
 .dropdown-fade-leave-active {
   transition: opacity 0.2s ease, transform 0.2s ease;
@@ -421,7 +438,6 @@ watch([isMobileMenuOpen, isAuthModalActive], ([isMenuOpen, isModalOpen]) => {
   opacity: 0;
   transform: translateY(-10px) translateX(-50%);
 }
-/* 下拉菜单项交错动画 */
 .staggered-item-fade-enter-active,
 .staggered-item-fade-leave-active {
   transition: opacity 0.3s ease, transform 0.3s ease;
@@ -433,9 +449,8 @@ watch([isMobileMenuOpen, isAuthModalActive], ([isMenuOpen, isModalOpen]) => {
   transform: translateY(-10px);
 }
 .staggered-item-fade-leave-active {
-  position: absolute; /* 离开时避免塌陷 */
+  position: absolute;
 }
-
 
 // --- 响应式断点 ---
 @media (max-width: $breakpoint-md) {
