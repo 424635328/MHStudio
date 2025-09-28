@@ -132,16 +132,16 @@ _<p align="center">一个动图或精美截图，展示应用的核心亮点，�
 
 1.  **克隆仓库**
     ```bash
-    git clone https://github.com/your-username/your-repo-name.git
-    cd your-repo-name
+    git clone https://github.com/424635328/MHStudio.git
+    cd MHStudio
     ```
 2.  **安装前端依赖**
-    <!-- 删除了重复的 npm install 命令 -->
+    
     ```bash
     npm install
     ```
 3.  **配置环境变量**
-    <!-- 更新为更简单的操作 -->
+   
     - 在项目根目录复制 `.env.example` 文件并重命名为 `.env`。
     - 登录您的 [Supabase 项目](https://app.supabase.com/)，在 `Project Settings > API` 中找到您的 URL 和 `anon` key，并填入 `.env` 文件。
 
